@@ -137,6 +137,7 @@ class TestNeemSqlAlchemy(TestCase):
               .select_from_tasks()
               .join_task_time_interval()
               .join_all_performers_data()
+              .filter_performer_tf_by_time_interval()
               .limit(100)
               ).get_result().df
         self.assertTrue(len(df) > 0)
@@ -152,7 +153,8 @@ class TestNeemSqlAlchemy(TestCase):
         df = (self.nq.select_all_participants_data().select_time_columns()
               .select_from_tasks()
               .join_task_time_interval()
-              .join_all_participants_data(is_outer=False)
+              .join_all_participants_data()
+              .filter_participant_tf_by_time_interval()
               .limit(100)
               ).get_result().df
         self.assertTrue(len(df) > 0)
