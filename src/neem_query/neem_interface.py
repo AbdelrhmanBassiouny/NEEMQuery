@@ -209,12 +209,12 @@ class NeemInterface(NeemQuery):
 
     def query_neems_motion_replay_data(self, participant_necessary: Optional[bool] = True,
                                        participant_base_link_necessary: Optional[bool] = False,
-                                       sql_neem_id: Optional[int] = None) -> NeemQuery:
+                                       sql_neem_ids: Optional[List[int]] = None) -> NeemQuery:
         """
         Get the data needed to replay the motions of the NEEMs.
         :param participant_necessary: whether to only include tasks that have a participant or not.
         :param participant_base_link_necessary: whether to only include tasks that have a participant base link or not.
-        :param sql_neem_id: the sql ID column of the Neems table.
+        :param sql_neem_ids: the sql ID column of the Neems table.
         :return: the query.
         """
         self.reset()
@@ -228,6 +228,6 @@ class NeemInterface(NeemQuery):
          join_neems_metadata().join_neems_environment()
          .order_by_participant_tf_stamp()
          )
-        if sql_neem_id is not None:
-            self.filter_by_sql_neem_id([sql_neem_id])
+        if sql_neem_ids is not None:
+            self.filter_by_sql_neem_id(sql_neem_ids)
         return self
