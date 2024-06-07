@@ -5,6 +5,12 @@ been migrated to an SQL database using the [neem_to_sql](https://github.com/Abde
 NEEMQuery uses SQLAlchemy and provides similar interface to the users. This makes if feel very familiar to SQLAlchemhy
 or SQL users in general.
 
+## Installation
+
+```bash
+pip install neemquery
+```
+
 ## Example Usage
 
 All below examples assume the neems are located in a 'test' database at 'localhost' which can be accessed by 'newuser'
