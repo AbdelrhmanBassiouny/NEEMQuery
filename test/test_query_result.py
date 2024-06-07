@@ -1,5 +1,4 @@
 from unittest import TestCase
-from neem_query.query_result import QueryResult
 from neem_query.neem_interface import NeemInterface
 from neem_query.enums import ColumnLabel as CL
 
