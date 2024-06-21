@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "NEEMQuery"
-version = "1.0.11"
+version = "1.0.115"
 description = "Querying the NEEMs (Narrative Enabled Episodic Memories) datasbase"
 readme = "README.md"
 authors = [{ name = "Abdelrhman Bassiouny", email = "abassiou@uni-bremen.de" }]
