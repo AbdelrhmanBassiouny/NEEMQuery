@@ -7,6 +7,8 @@ or SQL users in general.
 
 ## Installation
 
+Make sure you have [MariaDB](https://www.digitalocean.com/community/tutorials/how-to-install-mariadb-on-ubuntu-20-04) installed on your device.
+
 ```bash
 pip install neemquery
 ```
