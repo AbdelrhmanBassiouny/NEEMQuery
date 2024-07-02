@@ -37,14 +37,14 @@ from neem_query import NeemQuery
 
 nq = NeemQuery("mysql+pymysql://newuser:password@localhost/test")
 
-neem_id = 2
+neem_ids = [2]
 
 df = (nq.select_task_type().
       select_time_columns().
       select_neem_id().
       select_from_tasks().
       join_task_types().
-      join_neems_metadata().filter_by_sql_neem_id(neem_id).
+      join_neems_metadata().filter_by_sql_neem_id(neem_ids).
       join_task_time_interval().
       order_by_interval_begin()).get_result().df
 
@@ -58,13 +58,13 @@ and column names and table names.
 
 ```Python
 from neem_query import NeemQuery, TaskType
-from neem_query.neems_database import SomaHasIntervalBegin, SomaHasIntervalEnd, DulExecutesTask,
+from neem_query.neems_database import SomaHasIntervalBegin, SomaHasIntervalEnd, DulExecutesTask,\
     DulHasTimeInterval, Neem
 from sqlalchemy import and_
 
 nq = NeemQuery("mysql+pymysql://newuser:password@localhost/test")
 
-neem_id = 2
+neem_ids = [2]
 
 df = (nq.select(TaskType.o).
       select(SomaHasIntervalBegin.o).select(SomaHasIntervalEnd.o).
@@ -74,7 +74,7 @@ df = (nq.select(TaskType.o).
                           and_(TaskType.s == DulExecutesTask.dul_Task_o,
                                TaskType.o != "owl:NamedIndividual")).
       join(Neem,
-           Neem._id == DulExecutesTask.neem_id).filter(Neem.ID == neem_id).
+           Neem._id == DulExecutesTask.neem_id).filter(Neem.ID.in_(neem_ids)).
       join_neem_id_tables(DulHasTimeInterval, DulExecutesTask,
                           DulHasTimeInterval.dul_Event_s == DulExecutesTask.dul_Action_s).
       join_neem_id_tables(SomaHasIntervalBegin, DulHasTimeInterval,
