@@ -1,7 +1,8 @@
+import time
 from unittest import TestCase
 
 import pandas as pd
-from sqlalchemy import select
+from sqlalchemy import select, and_, func
 
 from neem_query import NeemQuery
 from neem_query.enums import ColumnLabel as CL, ParticipantBaseLinkName, ParticipantBaseLink, PerformerBaseLinkName, \
@@ -161,7 +162,7 @@ class TestNeemSqlAlchemy(TestCase):
         self.assertTrue(
             all(df[CL.participant_base_link.value][i].split(':')[-1] == df[CL.participant_child_frame_id.value][i]
                 for i in range(len(df)))
-            )
+        )
         self.assertTrue(all(
             df[CL.time_interval_begin.value][i] <= df[CL.participant_stamp.value][i] <= df[CL.time_interval_end.value][
                 i]
@@ -215,3 +216,36 @@ class TestNeemSqlAlchemy(TestCase):
                  )
         for c in query.get_result_in_chunks(100):
             self.assertTrue(len(c) > 0)
+
+    def test_filter_links(self):
+        pr2_links = self.get_pr2_links_query().get_result().df
+        self.assertTrue(len(pr2_links) > 0)
+        self.assertTrue(all(pr2_links["rdf_type_s"].str.contains("pr2")))
+
+    def test_filter_tf_by_pr2_links(self):
+        start = time.time()
+        pr2_links = self.get_pr2_links_query().get_result().df["rdf_type_s"].str.split(':').str[-1]
+        self.nq.reset()
+        filtered_tf = self.nq.select(Tf.child_frame_id).filter(Tf.child_frame_id.in_(pr2_links)).get_result().df
+        self.assertTrue(len(filtered_tf) > 0)
+        self.assertTrue(all(filtered_tf["child_frame_id"].isin(pr2_links)))
+        print(filtered_tf)
+
+    def test_filter_tf_by_pr2_links_using_join(self):
+        start = time.time()
+        pr2_links_table, pr2_links_query = self.get_pr2_links_query().as_subquery_table("pr2_links",
+                                                                                        return_query=True)
+        self.nq.reset()
+        filtered_tf = (self.nq.select(Tf.child_frame_id).
+                       join(pr2_links_table, Tf.child_frame_id == func.substring_index(pr2_links_table.rdf_type_s,
+                                                                                       ':', -1))).get_result().df
+        print(time.time() - start)
+        self.assertTrue(len(filtered_tf) > 0)
+        pr2_links = pr2_links_query.get_result().df["rdf_type_s"].str.split(':').str[-1]
+        self.assertTrue(all(filtered_tf["child_frame_id"].isin(pr2_links))
+                        )
+        print(filtered_tf)
+
+    def get_pr2_links_query(self):
+        return (self.nq.select(RdfType.s).filter_by_type(RdfType, ["urdf:link"])
+                .filter(RdfType.s.like("%pr2%")).distinct())

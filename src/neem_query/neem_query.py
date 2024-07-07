@@ -1,4 +1,5 @@
 import logging
+from copy import copy
 
 import pandas as pd
 from sqlalchemy import (create_engine, Engine, between, and_, func, Table, BinaryExpression, select,
@@ -36,6 +37,7 @@ class NeemQuery:
 
     def __init__(self, sql_uri: str):
         self._select_neem_id: bool = False
+        self.sql_uri = sql_uri
         self.engine = create_engine(sql_uri)
         self.session = sessionmaker(bind=self.engine)()
         self.query: Optional[Select] = None
@@ -1108,7 +1110,7 @@ class NeemQuery:
         """
         Create a view of the TF data.
         """
-        nq = NeemQuery(self.engine.url.__str__())
+        nq = NeemQuery(self.sql_uri)
         subquery = (nq._select_entity_tf_columns(entity_tf, entity_tf_header)
                     ._select_entity_tf_transform_columns(entity_tf_translation, entity_tf_rotation)
                     .select(entity_tf.neem_id)
@@ -1117,6 +1119,21 @@ class NeemQuery:
                                                entity_tf_rotation)
                     ).construct_subquery(name)
         return self.create_table_from_subquery(subquery)
+
+    def as_subquery_table(self, name: Optional[str] = None, return_query: Optional[bool] = False) \
+            -> Tuple[NamedFromClause, Optional[Subquery]]:
+        """
+        Create a subquery table from the query.
+        :param name: the name of the table.
+        :param return_query: whether to return the neem_query object or not.
+        :return: the table, and the query object if return_query is True.
+        """
+        subquery = self.construct_subquery(name)
+        table = self.create_table_from_subquery(subquery)
+        if return_query:
+            return table, self.__copy__()
+        else:
+            return table
 
     def _join_entity_tf_header_on_tf(self, entity_tf_header: Type[TfHeader], entity_tf: Type[Tf]) -> 'NeemQuery':
         """
@@ -1814,6 +1831,27 @@ class NeemQuery:
 
     def __eq__(self, other):
         return self.construct_query() == other.construct_query()
+
+    def __copy__(self):
+        nq = NeemQuery(self.sql_uri)
+        if self.query is not None:
+            nq.query = copy(self.query)
+        else:
+            nq.query = self.query
+        nq.selected_columns = self.selected_columns.copy()
+        nq.joins = self.joins.copy()
+        nq.in_filters = self.in_filters.copy()
+        nq.remove_filters = self.remove_filters.copy()
+        nq.outer_joins = self.outer_joins.copy()
+        nq.filters = self.filters.copy()
+        nq._limit = self._limit
+        nq._order_by = self._order_by
+        nq.select_from_tables = self.select_from_tables.copy()
+        nq.latest_executed_query = self.latest_executed_query
+        nq.latest_result = self.latest_result
+        nq._distinct = self._distinct
+        nq._select_neem_id = self._select_neem_id
+        return nq
 
     @property
     def query_changed(self):
