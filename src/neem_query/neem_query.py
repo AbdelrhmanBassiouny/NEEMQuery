@@ -35,12 +35,18 @@ class NeemQuery:
     _performer_tf_view: Optional[NamedFromClause] = None
     _participant_tf_view: Optional[NamedFromClause] = None
 
-    def __init__(self, sql_uri: str):
-        self._select_neem_id: bool = False
-        self.sql_uri = sql_uri
-        self.engine = create_engine(sql_uri)
+    def __init__(self, sql_uri: Optional[str] = None, engine: Optional[Engine] = None):
+        if engine is not None:
+            self.engine = engine
+        elif sql_uri is not None:
+            self.sql_uri = sql_uri
+            self.engine = create_engine(sql_uri)
+        self._init_query_data_holders()
+
+    def _init_query_data_holders(self):
         self.session = sessionmaker(bind=self.engine)()
         self.query: Optional[Select] = None
+        self._select_neem_id: bool = False
         self.selected_columns: Optional[List[InstrumentedAttribute]] = []
         self.joins: Optional[Dict[Table, BinaryExpression]] = {}
         self.in_filters: Optional[Dict[Column, List]] = {}
@@ -1110,7 +1116,7 @@ class NeemQuery:
         """
         Create a view of the TF data.
         """
-        nq = NeemQuery(self.sql_uri)
+        nq = NeemQuery(engine=self.engine)
         subquery = (nq._select_entity_tf_columns(entity_tf, entity_tf_header)
                     ._select_entity_tf_transform_columns(entity_tf_translation, entity_tf_rotation)
                     .select(entity_tf.neem_id)
@@ -1833,7 +1839,7 @@ class NeemQuery:
         return self.construct_query() == other.construct_query()
 
     def __copy__(self):
-        nq = NeemQuery(self.sql_uri)
+        nq = NeemQuery(engine=self.engine)
         if self.query is not None:
             nq.query = copy(self.query)
         else:

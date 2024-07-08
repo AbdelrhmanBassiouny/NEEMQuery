@@ -2,7 +2,7 @@ import time
 from unittest import TestCase
 
 import pandas as pd
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, create_engine
 
 from neem_query import NeemQuery
 from neem_query.enums import ColumnLabel as CL, ParticipantBaseLinkName, ParticipantBaseLink, PerformerBaseLinkName, \
@@ -19,6 +19,12 @@ class TestNeemSqlAlchemy(TestCase):
 
     def tearDown(self):
         self.nq.reset()
+
+    def test_init_using_engine(self):
+        sql_engine = create_engine("mysql+pymysql://newuser:password@localhost/test")
+        nq = NeemQuery(engine=sql_engine)
+        sql_neem_ids = nq.select_sql_neem_id().select_from(Neem).get_result().df
+        self.assertTrue(len(sql_neem_ids) > 0)
 
     def test_sql_like(self):
         tasks = (self.nq.session.query(DulExecutesTask).
@@ -223,28 +229,45 @@ class TestNeemSqlAlchemy(TestCase):
         self.assertTrue(all(pr2_links["rdf_type_s"].str.contains("pr2")))
 
     def test_filter_tf_by_pr2_links(self):
-        start = time.time()
-        pr2_links = self.get_pr2_links_query().get_result().df["rdf_type_s"].str.split(':').str[-1]
-        self.nq.reset()
-        filtered_tf = self.nq.select(Tf.child_frame_id).filter(Tf.child_frame_id.in_(pr2_links)).get_result().df
+        n_repeats = 1
+        times = []
+        for _ in range(n_repeats):
+            start = time.time()
+            pr2_links = self.get_pr2_links_query().get_result().df["rdf_type_s"].str.split(':').str[-1]
+            self.nq.reset()
+            filtered_tf = self.nq.select(Tf.child_frame_id).filter(Tf.child_frame_id.in_(pr2_links)).get_result().df
+            times.append(time.time() - start)
+            self.nq.reset()
+        # print(f"Time taken: {sum(times) / n_repeats}")
         self.assertTrue(len(filtered_tf) > 0)
         self.assertTrue(all(filtered_tf["child_frame_id"].isin(pr2_links)))
-        print(filtered_tf)
+
+    def test_filter_tf_by_base_link(self):
+        n_repeats = 1
+        times = []
+        for i in range(n_repeats):
+            start = time.time()
+            filtered_tf = self.nq.select(Tf.child_frame_id).filter(Tf.child_frame_id == 'base_link').get_result().df
+            times.append(time.time() - start)
+            if i != n_repeats - 1:
+                self.nq.reset()
+        self.assertTrue(len(filtered_tf) > 0)
+        self.assertTrue(all(filtered_tf["child_frame_id"] == 'base_link'))
+        # print(len(filtered_tf))
+        # print(self.nq.query)
+        # print(f"Time taken: {sum(times) / n_repeats}")
 
     def test_filter_tf_by_pr2_links_using_join(self):
-        start = time.time()
         pr2_links_table, pr2_links_query = self.get_pr2_links_query().as_subquery_table("pr2_links",
                                                                                         return_query=True)
         self.nq.reset()
         filtered_tf = (self.nq.select(Tf.child_frame_id).
-                       join(pr2_links_table, Tf.child_frame_id == func.substring_index(pr2_links_table.rdf_type_s,
-                                                                                       ':', -1))).get_result().df
-        print(time.time() - start)
+                       join(pr2_links_table, Tf.child_frame_id == func.substring(pr2_links_table.rdf_type_s, 5))
+                       ).get_result().df
         self.assertTrue(len(filtered_tf) > 0)
         pr2_links = pr2_links_query.get_result().df["rdf_type_s"].str.split(':').str[-1]
         self.assertTrue(all(filtered_tf["child_frame_id"].isin(pr2_links))
                         )
-        print(filtered_tf)
 
     def get_pr2_links_query(self):
         return (self.nq.select(RdfType.s).filter_by_type(RdfType, ["urdf:link"])
