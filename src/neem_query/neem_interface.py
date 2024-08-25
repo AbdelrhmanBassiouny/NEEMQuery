@@ -45,24 +45,28 @@ class NeemInterface(NeemQuery):
     and allows the user to use it directly for more complex and custom built queries.
     """
 
-    def __init__(self, sql_url: str):
+    def __init__(self, sql_url: Optional[str] = None, engine: Optional[Engine] = None):
         """
         Initialize the NEEM interface.
+
         :param sql_url: the URL to the NEEM database.
+        :param engine: the SQLAlchemy engine to use.
         """
-        super().__init__(sql_url)
+        super().__init__(sql_url, engine)
 
     @classmethod
     def from_neem_interface(cls, ni: 'NeemInterface') -> 'NeemInterface':
         """
         Create a new instance of the NeemInterface from an existing NeemQuery.
+
         :param ni: the NeemInterface instance.
         """
-        return cls(ni.engine.url.__str__().replace('***', 'password'))
+        return cls(engine=ni.engine)
 
     def query_plan_of_neem(self, neem_id: int) -> NeemQuery:
         """
         Get the complete cram plan of a neem given the neem ID.
+
         :param neem_id: The id in (ID) column of the Neems table.
         :return: The plan as a neem query.
         """
